@@ -36,7 +36,7 @@ services:
     #   MB_DB_PASS: mysecretpassword
     #   MB_DB_HOST: postgres
 
-  road_etl:
+  ep_transactions:
     build: .  # build this container's image using the Dockerfile
     container_name: ep_transactions
     depends_on:
