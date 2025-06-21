@@ -1,7 +1,7 @@
 1) Build image
 docker build -t transactions . 
 
-2) Run container build base on image road
+2) Run container build base on image transactions
 docker run -d --name ep_transactions transactions
 
 3) Remove container
