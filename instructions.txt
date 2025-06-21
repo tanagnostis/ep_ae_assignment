@@ -1,0 +1,24 @@
+Scenario 1
+
+postgres-db ports = 5432:5432
+Then connect with pgadmin normally.
+==> host name = localhost or postgres-db
+    port = 5432
+
+Can't connect to dbeaver or other RDBMS.
+
+Scenario 2
+
+postgres-db ports = 5434:5432
+
+PGADMIN 
+host name/ address = IP address of postgres-db container 
+Port = 5432
+
+DBeaver:
+Host = localhost
+Port = 5434
+
+METABASE:
+host name/ address = IP address of postgres-db container 
+Port = 5432
