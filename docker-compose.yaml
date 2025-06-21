@@ -1,0 +1,47 @@
+version: '1'
+services:
+  postgresdb:
+    image: postgres
+    container_name: postgres-db
+    ports:
+      - 5434:5432
+    environment:
+      - POSTGRES_PASSWORD=transactions25 # required variable, postgres username is by default 'postgres' 
+    volumes:
+      - pgadmin:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports: 
+      - 80:80
+    environment:                                                   
+      - PGADMIN_DEFAULT_EMAIL=user@domain.com
+      - PGADMIN_DEFAULT_PASSWORD=transactions25
+    depends_on:
+      - postgresdb
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase_transactions
+    ports:
+      - 3000:3000
+    depends_on:
+      - postgresdb
+    # environment:
+    #   MB_DB_TYPE: postgres
+    #   MB_DB_DBNAME: mydatabase
+    #   MB_DB_PORT: 5432
+    #   MB_DB_USER: postgres
+    #   MB_DB_PASS: mysecretpassword
+    #   MB_DB_HOST: postgres
+
+  road_etl:
+    build: .  # build this container's image using the Dockerfile
+    container_name: ep_transactions
+    depends_on:
+      - postgresdb
+
+
+volumes:
+  pgadmin:
