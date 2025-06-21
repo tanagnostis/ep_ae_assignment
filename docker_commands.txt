@@ -1,0 +1,22 @@
+1) Build image
+docker build -t transactions . 
+
+2) Run container build base on image road
+docker run -d --name ep_transactions transactions
+
+3) Remove container
+docker rm ep_transactions
+
+4) Remove image
+docker rmi transactions
+
+5) Inspect container
+docker inspect <container_name> 
+docker inspect <container_id>
+
+6) Container logs
+docker logs <container_name> 
+docker logs <container_id>
+
+7) docker_compose
+docker compose up -d --build
