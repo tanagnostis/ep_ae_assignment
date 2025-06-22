@@ -22,3 +22,6 @@ SUM(CASE WHEN ft.available_balance_delta > 0 THEN ft.available_balance_delta ELS
 SUM(CASE WHEN ft.available_balance_delta < 0 THEN ft.available_balance_delta ELSE 0 END) AS negative_flows
 FROM fact_transactions ft
 ;
+
+-- Client Inactivity Ranking (Longest Stretch)
+-- Rank clients by their longest consecutive period of financial inactivity
