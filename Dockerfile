@@ -1,5 +1,5 @@
 # set the base image with specific tag/version
-FROM python:3.12.11
+FROM python:3.10.9
 
 # set up working directory inside the container
 WORKDIR /app
@@ -12,4 +12,4 @@ RUN pip3 install -r requirements.txt
 COPY . /app
 
 # start cron in foreground and set it as executable command for when the container starts 
-CMD ["python", "ETL_pipeline.py"]
+CMD ["python", "-u", "ETL_pipeline.py"]

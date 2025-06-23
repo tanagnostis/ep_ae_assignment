@@ -30,18 +30,17 @@ services:
       - postgresdb
     # environment:
     #   MB_DB_TYPE: postgres
-    #   MB_DB_DBNAME: mydatabase
-    #   MB_DB_PORT: 5432
+    #   MB_DB_DBNAME: postgres
+    #   MB_DB_PORT: 5434
     #   MB_DB_USER: postgres
-    #   MB_DB_PASS: mysecretpassword
-    #   MB_DB_HOST: postgres
+    #   MB_DB_PASS: transactions25
+    #   MB_DB_HOST: postgresdb
 
-  ep_transactions:
-    build: .  # build this container's image using the Dockerfile
-    container_name: ep_transactions
-    depends_on:
-      - postgresdb
-
+  # ep_transactions:
+  #   build: .  # build this container's image using the Dockerfile
+  #   container_name: ep_transactions
+  #   depends_on:
+  #     - postgresdb
 
 volumes:
   pgadmin:

@@ -1,6 +1,6 @@
 # 0. Import packages/libraries
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import psycopg2
 # 1. Dataset - Loading, Exploration and Cleaning
 
@@ -118,3 +118,197 @@ facts = data[['dim_date_id', 'dim_account_id', 'client_id', 'available_balance_d
 
 print(f"Facts table rows: {facts.shape[0]}")
 print(f"Facts table columns: {facts.shape[1]}")
+
+
+# # 3. Database Setup
+
+
+# # 3.1 Connection details to database
+# db_engine = create_engine("postgresql+psycopg2://postgres:transactions25@172.18.0.1:5434/postgres")
+
+# # 3.2 Create dimensions and fact tables
+
+# dim_clients = '''
+# CREATE TABLE dim_clients (
+#     client_id                   SERIAL PRIMARY KEY,
+#     name                        VARCHAR(255),
+#     birth_date                  TIMESTAMP, 
+#     email                       VARCHAR(255),
+#     phone_number                VARCHAR(50),
+#     is_active                   BOOLEAN,
+#     preferred_contact_method    VARCHAR(50),
+#     customer_segment            VARCHAR(50),
+#     marketing_opt_in            BOOLEAN
+# );
+# '''
+
+# dim_addresses = '''
+# CREATE TABLE dim_addresses (
+#     dim_address_id              SERIAL PRIMARY KEY,
+#     client_id                   INTEGER REFERENCES dim_clients(client_id),
+#     address                     VARCHAR(100),
+#     city                        VARCHAR(100),
+#     state_province              VARCHAR(20),
+#     zip_code                    VARCHAR(20),
+#     country                     VARCHAR(100)
+# );
+# '''
+
+# dim_accounts = '''
+# CREATE TABLE dim_accounts (
+#     dim_account_id              SERIAL PRIMARY KEY, 
+#     account_id                  VARCHAR(50), 
+#     client_id                   INTEGER REFERENCES dim_clients(client_id), 
+#     registration_date           TIMESTAMP,
+#     acc_currency_code           VARCHAR(10)
+# );
+# '''
+
+# dim_dates = '''
+# CREATE TABLE dim_dates (
+#     dim_date_id                 SERIAL PRIMARY KEY,
+#     event_date                  TIMESTAMP,
+#     day                         INTEGER,
+#     month                       INTEGER,
+#     month_name                  VARCHAR(20),
+#     quarter                     INTEGER,
+#     year                        INTEGER,
+#     weekday_name                VARCHAR(20)
+# );
+# '''
+
+# fact_transactions = '''
+# CREATE TABLE fact_transactions (
+#     transaction_id              SERIAL PRIMARY KEY,
+#     dim_date_id                 INTEGER REFERENCES dim_dates(dim_date_id),                
+#     dim_account_id              INTEGER REFERENCES dim_accounts(dim_account_id),
+#     client_id                   INTEGER REFERENCES dim_clients(client_id),
+#     available_balance_delta     NUMERIC(18,2),
+#     available_balance           NUMERIC(18,2)
+# );
+# '''
+# with db_engine.begin() as connection:
+#     connection.execute(dim_clients)
+    # connection.execute(dim_addresses)
+    # connection.execute(dim_accounts)
+    # connection.execute(dim_dates)
+    # connection.execute(fact_transactions)
+
+# clients_dim.to_sql(
+#     name='dim_clients',
+#     con=db_engine,
+#     if_exists='append',
+#     index=False,
+#     method='multi'
+# )
+
+# addresses_dim.to_sql(
+#     name='dim_addresses',
+#     con=db_engine,
+#     if_exists='append',
+#     index=False,
+#     method='multi'
+# )
+
+# accounts_dim.to_sql(
+#     name='dim_accounts',
+#     con=db_engine,
+#     if_exists='append',
+#     index=False,
+#     method='multi'
+# )
+
+# dim_date.to_sql(
+#     name='dim_dates',
+#     con=db_engine,
+#     if_exists='append',
+#     index=False,
+#     method='multi'
+# )
+
+# facts.to_sql(
+#     name='fact_transactions',
+#     con=db_engine,
+#     if_exists='append',
+#     index=False,
+#     method='multi'
+# )
+
+# mv_daily_balances = '''
+# CREATE MATERIALIZED VIEW mv_daily_balances AS
+
+# -- Optional: initial balances per client (can be 0 or another table)
+# WITH initial_balances AS (
+#   SELECT dim_account_id, 0::NUMERIC AS initial_balance
+#   FROM (SELECT DISTINCT dim_account_id FROM fact_transactions) ft
+# ),
+
+# -- Generate all dates per client
+# date_series AS (
+#   SELECT
+#     ft.dim_account_id,
+#     generate_series(MIN(DATE(dd.event_date)), MAX(DATE(dd.event_date)), INTERVAL '1 day')::date AS balance_date
+#   FROM fact_transactions ft
+#   INNER JOIN dim_dates dd
+#   	ON ft.dim_date_id = dd.dim_date_id
+#   GROUP BY ft.dim_account_id
+# ),
+
+# -- Aggregate daily transactions
+# daily_transactions AS (
+#   SELECT
+#     dim_account_id,
+#     DATE(dd.event_date) as event_date,
+#     SUM(ft.available_balance_delta) AS balance_delta
+#   FROM fact_transactions ft
+#   INNER JOIN dim_dates dd
+#   	ON ft.dim_date_id = dd.dim_date_id
+#   GROUP BY dim_account_id, DATE(dd.event_date)
+# ),
+
+# -- Join with date series and fill missing dates with 0 transaction
+# combined AS (
+#   SELECT
+#     ds.dim_account_id,
+#     ds.balance_date,
+#     COALESCE(dt.balance_delta, 0) AS balance_delta
+#   FROM date_series ds
+#   LEFT JOIN daily_transactions dt
+#     ON ds.dim_account_id = dt.dim_account_id AND ds.balance_date = dt.event_date
+# ),
+
+# -- Compute running total for closing balance
+# running_balance AS (
+#   SELECT
+#     c.dim_account_id,
+#     c.balance_date,
+#     c.balance_delta,
+#     ib.initial_balance +
+#       SUM(c.balance_delta) OVER (
+#         PARTITION BY c.dim_account_id
+#         ORDER BY c.balance_date
+#         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+#       ) AS closing_balance
+#   FROM combined c
+#   JOIN initial_balances ib ON c.dim_account_id = ib.dim_account_id
+# ),
+
+# -- Compute starting balance by subtracting today's delta
+# final_daily_balance AS (
+#   SELECT
+#     dim_account_id,
+#     balance_date,
+#     closing_balance - balance_delta AS starting_balance,
+#     balance_delta,
+#     closing_balance
+#   FROM running_balance
+# )
+
+# -- Final result
+# SELECT *
+# FROM final_daily_balance
+# ORDER BY dim_account_id, balance_date;
+# '''
+
+# with db_engine.begin() as connection:
+#     connection.execute(mv_daily_balances)
