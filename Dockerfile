@@ -1,5 +1,5 @@
 # set the base image with specific tag/version
-FROM python:3.10.11
+FROM python:3.12.11
 
 # set up working directory inside the container
 WORKDIR /app
