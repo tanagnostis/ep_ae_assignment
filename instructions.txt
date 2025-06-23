@@ -20,5 +20,5 @@ Host = localhost
 Port = 5434
 
 METABASE:
-host name/ address = IP address of postgres-db container 
+host name/ address = IP address of postgres-db container (172.18.0.1)
 Port = 5432
