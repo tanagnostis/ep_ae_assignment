@@ -25,3 +25,37 @@ FROM fact_transactions ft
 
 -- Client Inactivity Ranking (Longest Stretch)
 -- Rank clients by their longest consecutive period of financial inactivity
+
+SELECT
+  dim_account_id,
+  MAX(event_date - prev_activity_date) AS max_inactivity_time
+FROM (
+  SELECT
+    dim_account_id,
+    event_date,
+    LAG(event_date) OVER (PARTITION BY dim_account_id ORDER BY event_date) AS prev_activity_date
+  FROM fact_transactions ft
+  INNER JOIN dim_dates dd
+	ON ft.dim_date_id = dd.dim_date_id
+) AS activity_gaps
+WHERE prev_activity_date IS NOT NULL
+GROUP BY dim_account_id
+ORDER BY max_inactivity_time;
+
+-- Client Inactivity Ranking (Overall)
+-- Identify and rank clients based on the duration since their last recorded financial activity
+
+SELECT 
+	account_id, 
+	client_id, 
+	CURRENT_DATE - latest_event AS days_since_latest_activity,
+  	RANK() OVER (ORDER BY CURRENT_DATE - latest_event DESC) AS inactivity_rank
+FROM dim_accounts acc
+INNER JOIN(
+	SELECT ft.dim_account_id, MAX(event_date) as latest_event
+	FROM fact_transactions ft
+	INNER JOIN dim_dates dd
+		ON ft.dim_date_id = dd.dim_date_id	
+	GROUP BY dim_account_id) as le
+ON acc.dim_account_id = le.dim_account_id
+ORDER BY inactivity_rank;
